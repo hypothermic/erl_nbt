@@ -1,9 +1,9 @@
 erl_nbt [![Hex.pm Badge](https://img.shields.io/hexpm/v/erl_nbt.svg?style=flat)](https://hex.pm/packages/erl_nbt)
 =====
 
-[![Hex.pm Badge](https://img.shields.io/hexpm/v/erl_nbt.svg?style=flat)](https://hex.pm/packages/erl_nbt)
-
 An Erlang/OTP library which can manipulate NBT (Named Binary Tag) data.
+
+This library currently is up to date with the [1.0 spec](https://web.archive.org/web/20110723210920/http://www.minecraft.net/docs/NBT.txt).
 
 Please note that the API may change before the first major version is released.
 
