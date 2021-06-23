@@ -1,0 +1,12 @@
+** edoc usage page for filemeta library documentation **
+
+@author Matthijs Bakker <matthijs at hypothermic .nl>
+@copyright 2021 hypothermic.nl
+@version 0.1.0
+@title Examples of how to use the `erl_nbt' library
+@doc Examples of how to use the `erl_nbt' library
+
+    Examples can be found under the "test" folder.
+    For example, "basic_test.erl" shows how "basic.nbt" can be decoded.
+
+@end

@@ -2,7 +2,7 @@
 %%% @author Matthijs Bakker <matthijs at hypothermic .nl>
 %%% @copyright (C) 2021 hypothermic.nl
 %%% @doc
-%%%
+%%%		Provides decoding/parsing functions for NBT data
 %%% @end
 %%% Created : 22. Jun 2021 11:07 PM
 %%%-------------------------------------------------------------------
@@ -10,96 +10,145 @@
 -author("Matthijs Bakker <matthijs at hypothermic .nl>").
 -copyright("Copyright (C) 2021 hypothermic.nl").
 
+-include("erl_nbt.hrl").
+
 %%%-------------------------------------------------------------------
-%%% API
+%%% Private API
 %%%-------------------------------------------------------------------
 
 -export([
 	decode/1
 ]).
 
--spec decode(Binary :: binary()) -> {ok, erl_nbt:nbt(), Rest :: binary()}.
+%%%-------------------------------------------------------------------
+%%% @private Use the public equivalent erl_nbt:decode_with_rest/1
+%%% @since 0.1.0
+%%%
+%%% @doc Decodes the first (nested) NBT tag in the specified binary.
+%%%
+%%% 	This function reads the first NBT tag from a binary.
+%%% 	If it is a compound tag, it will read all children (including
+%%% 	nested compound tags.)
+%%%
+%%% 	If the given binary has remaining data after the NBT tag,
+%%% 	this remaining data will be returned as Rest.
+%%%
+%%% @end
+%%%
+%%% @param Binary The binary to read the NBT tag from
+%%%
+%%% @returns
+%%% 	A tuple containing {ok, Nbt, Remainder}
+%%%			where NBT is a map (same as type erl_nbt:nbt())
+%%%			and Remainder is an (empty) binary
+%%%		or an error tuple containing {error, {Reason, Details}}
+%%% @end
+%%%-------------------------------------------------------------------
+
+-spec decode(Binary :: binary()) ->
+	{ok, Nbt :: erl_nbt:nbt(), Rest :: binary()} |
+	{error, {max_depth_reached, Depth :: integer()}} |
+	{error, {max_count_reached, Count :: integer()}} |
+	{error, {unknown_tag_id, EncounteredTagId :: integer()}}.
 decode(Binary) ->
 	% All NBT files/binaries are inherently compound tags, so read compound.
-	decode(Binary, 0, 0, []).
-
+	decode_tag(Binary, 0, 0, #{}).
 
 %%%-------------------------------------------------------------------
 %%% Internal Functions
 %%%-------------------------------------------------------------------
 
-decode(Binary, _Depth, tag_end, Output) ->
-	{ok, lists:last(lists:reverse(Output)), Binary};
+-spec decode_tag(Binary :: binary(), Count :: integer(), Depth :: integer(), Output :: map()) ->
+	{ok, Nbt :: erl_nbt:nbt(), Rest :: binary()} |
+	{error, {max_depth_reached, Depth :: integer()}} |
+	{error, {max_count_reached, Count :: integer()}} |
+	{error, {unknown_tag_id, EncounteredTagId :: integer()}}.
 
-decode(<<>>, _Depth, _Count, Output) ->
-	{ok, lists:last(lists:reverse(Output)), []};
+% Maximum tag depth has been reached, stop and return error.
+decode_tag(_Binary, _Count, Depth, _Output) when Depth >= ?MAX_DEPTH ->
+	{error, {max_depth_reached, Depth}};
 
-decode(_Binary, Depth, _Count, _Output) when Depth >= 10 -> % TODO un-hardcode this
-	{error, max_depth_reached};
+% Maximum child count has been reached, stop and return error.
+decode_tag(_Binary, Count, _Depth, _Output) when Count >= ?MAX_COUNT ->
+	{error, {max_count_reached, Count}};
 
-decode(_Binary, _Depth, Count, _Output) when Count >= 10 -> % TODO un-hardcode this
-	{error, max_count_reached};
+% Reached end of binary, this occurs because the root compound tag doesn't end with 0x00
+decode_tag(<<>>, _Count, _Depth, Output) ->
+	{ok, Output, <<>>};
 
-decode(Binary, Depth, Count, Output) ->
-	{ok, Tag, Rest} = decode_tag(Binary, Depth),
+% TAG_End reached, the current compound tag has been fully read. Return all children.
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, _Count, _Depth, Output) when Id =:= ?TAG_END_ID ->
+	{ok, Output, Rest};
 
-	case Tag of
-		% End tag, stop processing this compound
-		tag_end ->
-			decode(Rest, Depth, tag_end, Output);
-		% More tags following this one
-		_ ->
-			decode(Rest, Depth, Count + 1, [Tag | Output])
-	end.
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_BYTE_ID ->
+	{ok, Name, Rest2} = decode_string(Rest),
+	{ok, Byte, Rest3} = decode_byte(Rest2),
 
-decode_tag(<<Type:8/unsigned-integer, Binary/binary>>, Depth) ->
-	decode_type(Type, Binary, Depth).
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => Byte});
 
-decode_type(0, _Binary, _Depth) ->
-	{ok, tag_end, <<>>};
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_SHORT_ID ->
+	{ok, Name, Rest2} = decode_string(Rest),
+	{ok, Short, Rest3} = decode_short(Rest2),
 
-decode_type(3, Binary, _Depth) ->
-	{ok, Name, Rest1} = decode_tag_string(Binary),
-	{ok, Int, Rest2} = decode_tag_int(Rest1),
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => Short});
 
-	{ok, #{Name => Int}, Rest2};
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_INT_ID ->
+	{ok, Name, Rest2} = decode_string(Rest),
+	{ok, Int, Rest3} = decode_int(Rest2),
 
-decode_type(5, Binary, _Depth) ->
-	{ok, Name, Rest1} = decode_tag_string(Binary),
-	{ok, Float, Rest2} = decode_tag_float(Rest1),
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => Int});
 
-	{ok, #{Name => Float}, Rest2};
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_LONG_ID ->
+	{ok, Name, Rest2} = decode_string(Rest),
+	{ok, Long, Rest3} = decode_long(Rest2),
 
-decode_type(6, Binary, _Depth) ->
-	{ok, Name, Rest1} = decode_tag_string(Binary),
-	{ok, Double, Rest2} = decode_tag_double(Rest1),
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => Long});
 
-	{ok, #{Name => Double}, Rest2};
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_FLOAT_ID ->
+	{ok, Name, Rest2} = decode_string(Rest),
+	{ok, Float, Rest3} = decode_float(Rest2),
 
-decode_type(8, Binary, _Depth) ->
-	{ok, Name, Rest1} = decode_tag_string(Binary),
-	{ok, Value, Rest2} = decode_tag_string(Rest1),
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => Float});
 
-	{ok, #{Name => Value}, Rest2};
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_DOUBLE_ID ->
+	{ok, Name, Rest2} = decode_string(Rest),
+	{ok, Double, Rest3} = decode_double(Rest2),
 
-decode_type(10, Binary, Depth) ->
-	{ok, Name, Rest1} = decode_tag_string(Binary),
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => Double});
 
-	{ok, Tags, Rest2} = decode(Rest1, Depth + 1, 0, []),
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_STRING_ID ->
+	{ok, Name, Rest2} = decode_string(Rest),
+	{ok, String, Rest3} = decode_string(Rest2),
 
-	{ok, #{Name => Tags}, Rest2};
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => String});
 
-decode_type(Type, _Binary, _Depth) ->
-	{error, {bad_type, Type}}.
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_COMPOUND_ID ->
+	{ok, Name, Rest2} = decode_string(Rest),
+	{ok, NestedCompound, Rest3} = decode_tag(Rest2, 0, Depth + 1, #{}),
 
-decode_tag_string(<<NameLength:16/unsigned-integer, NameBinary:NameLength/binary, Rest/binary>>) ->
-	{ok, binary_to_list(NameBinary), Rest}.
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => NestedCompound});
 
-decode_tag_int(<<Int:32/signed-big-integer, Rest/binary>>) ->
+% Encountered an unknown tag ID, probably a malformed NBT file.
+decode_tag(<<Id:8/unsigned-integer, _Rest/binary>>, _Count, _Depth, _Output) ->
+	{error, {unknown_tag_id, Id}}.
+
+decode_byte(<<Byte:8/signed-integer, Rest/binary>>) ->
+	{ok, Byte, Rest}.
+
+decode_short(<<Short:16/big-signed-integer, Rest/binary>>) ->
+	{ok, Short, Rest}.
+
+decode_int(<<Int:32/big-signed-integer, Rest/binary>>) ->
 	{ok, Int, Rest}.
 
-decode_tag_float(<<Float:32/big-float, Rest/binary>>) ->
+decode_long(<<Long:64/big-signed-integer, Rest/binary>>) ->
+	{ok, Long, Rest}.
+
+decode_float(<<Float:32/big-signed-float, Rest/binary>>) ->
 	{ok, Float, Rest}.
 
-decode_tag_double(<<Double:64/big-float, Rest/binary>>) ->
+decode_double(<<Double:64/big-signed-float, Rest/binary>>) ->
 	{ok, Double, Rest}.
+
+decode_string(<<Length:16/unsigned-integer, String:Length/binary, Rest/binary>>) ->
+	{ok, binary_to_list(String), Rest}.

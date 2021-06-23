@@ -21,3 +21,7 @@ rebar3.crashdump
 .idea
 *.iml
 .vscode
+
+# EDoc
+doc/*
+!doc/*.edoc
