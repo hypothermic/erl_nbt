@@ -1,6 +1,8 @@
 erl_nbt
 =====
 
+[![Hex.pm Badge](https://img.shields.io/hexpm/v/erl_nbt.svg?style=flat)](https://hex.pm/packages/erl_nbt)
+
 An Erlang/OTP library which can manipulate NBT (Named Binary Tag) data.
 
 Please note that the API may change before the first major version is released.
