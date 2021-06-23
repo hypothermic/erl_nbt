@@ -1,8 +1,10 @@
 {application, erl_nbt, [
-	{description, "An Erlang OTP library for manipulating NBT (Named Binary Tag) data"},
+	{description, "An Erlang/OTP library for manipulating NBT (Named Binary Tag) data"},
 	{vsn, "0.1.0"},
 	{licenses, ["Apache 2.0"]},
-	{links, []},
+	{links, [
+		{"GitHub", "https://github.com/hypothermic/erl_nbt"}
+	]},
 
 	{registered, []},
 	{applications, [

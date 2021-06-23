@@ -113,6 +113,23 @@ decode(Binary) ->
 decode_with_rest(Binary) ->
 	erl_nbt_decode:decode(Binary).
 
+%%%-------------------------------------------------------------------
+%%% @since 0.1.0
+%%%
+%%% @doc Encodes an NBT tag in Erlang Map form to binary.
+%%%
+%%% 	This function accepts an NBT tag representation in map-form
+%%%		(aka type erl_nbt:nbt()) and encodes it into a binary.
+%%%
+%%% @end
+%%%
+%%% @param Nbt The NBT tag to encode
+%%%
+%%% @returns
+%%% 	A tuple containing {ok, Nbt} where Nbt is a map
+%%% @end
+%%%-------------------------------------------------------------------
+
 -spec encode(Nbt :: nbt()) -> {ok, binary()}.
 encode(Nbt) ->
 	erl_nbt_encode:encode(Nbt).

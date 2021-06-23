@@ -3,10 +3,19 @@
 @author Matthijs Bakker <matthijs at hypothermic .nl>
 @copyright 2021 hypothermic.nl
 @version 0.1.0
-@title Overview of the `erl_nbt' library
+@title Overview of the erl_nbt library
 @doc `erl_nbt' is a library which can manipulate NBT (Named Binary Tag) data.
 
     It can decode binary NBT data to an Erlang Map.
     It can encode data in an Erlang Map to binary NBT data.
+
+    Currently, the decoding limits of an NBT tag are fixed (see erl_nbt.hrl).
+    In future versions of this library, the decoding limits will be
+    modifiable via options given to the decode function.
+    The maximum amount of nested compound tags when decoding an NBT binary is currently set at `256'.
+    The maximum amount of children under a compound tag when decoding an NBT binary is currently set at `1024'.
+
+    Examples of how to use the library can be found under the `test' directory,
+    or on the documentation page `usage.edoc'
 
 @end
