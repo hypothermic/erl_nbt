@@ -1,0 +1,7 @@
+** edoc overview page for filemeta library documentation **
+
+@author Matthijs Bakker <matthijs at hypothermic .nl>
+@copyright (C) 2021 hypothermic.nl
+@version 0.1.0
+@title Documentation for the `erl_nbt' library
+@doc `erl_nbt' is a library which can manipulate NBT (Named Binary Tag) data

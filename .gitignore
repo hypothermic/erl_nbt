@@ -1,0 +1,23 @@
+# Rebar3 and build
+.rebar3
+_*
+.eunit
+*.o
+*.beam
+*.plt
+*.swp
+*.swo
+.erlang.cookie
+ebin
+log
+erl_crash.dump
+.rebar
+logs
+_build
+rebar3.crashdump
+*~
+
+# Editor
+.idea
+*.iml
+.vscode
