@@ -5,7 +5,8 @@ An Erlang/OTP library which can manipulate NBT (Named Binary Tag) data.
 
 This library currently is up to date with the [1.0 spec](https://web.archive.org/web/20110723210920/http://www.minecraft.net/docs/NBT.txt).
 
-Please note that the API may change before the first major version is released.
+Please note that the API may change before the first major version is released.  
+If you want to avoid API breakage, please wait until version 1.0.0 is released.
 
 Quick navigation:
 [Build](#building-the-library)
@@ -34,9 +35,9 @@ Depending on your build tool, add the following line to the "dependencies" secti
 
 | Build Tool            | Dependency line |
 | --------------------- | ------- |
-| rebar3 (Erlang/OTP)   | `{erl_nbt, "0.1.0"}` |
-| mix (Elixir)          | `{:erl_nbt "~> 0.1.0"}` |
-| erlang.mk (Erlang)    | `dep_erl_nbt = hex 0.1.0` |
+| rebar3 (Erlang/OTP)   | `{erl_nbt, "0.2.0"}` |
+| mix (Elixir)          | `{:erl_nbt "~> 0.2.0"}` |
+| erlang.mk (Erlang)    | `dep_erl_nbt = hex 0.2.0` |
 
 Documentation
 -----

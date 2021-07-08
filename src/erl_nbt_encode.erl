@@ -72,6 +72,30 @@ encode_tag(Key, {?TAG_DOUBLE_TYPE, Value}) ->
 		Value:64/big-signed-float
 	>>;
 
+encode_tag(Key, {?TAG_BYTE_ARRAY_TYPE, Value}) ->
+	<<
+		?TAG_BYTE_ARRAY_ID:8/unsigned-integer,
+		(encode_string(Key))/binary,
+		(length(Value)):32/big-signed-integer,
+		(lists:foldl(fun (E, Acc) -> <<Acc/binary, E:8/signed-integer>> end, <<>>, Value))/binary
+	>>;
+
+encode_tag(Key, {?TAG_INT_ARRAY_TYPE, Value}) ->
+	<<
+		?TAG_INT_ARRAY_ID:8/unsigned-integer,
+		(encode_string(Key))/binary,
+		(length(Value)):32/big-signed-integer,
+		(lists:foldl(fun (E, Acc) -> <<Acc/binary, E:32/signed-integer>> end, <<>>, Value))/binary
+	>>;
+
+encode_tag(Key, {?TAG_LONG_ARRAY_TYPE, Value}) ->
+	<<
+		?TAG_LONG_ARRAY_ID:8/unsigned-integer,
+		(encode_string(Key))/binary,
+		(length(Value)):32/big-signed-integer,
+		(lists:foldl(fun (E, Acc) -> <<Acc/binary, E:64/signed-integer>> end, <<>>, Value))/binary
+	>>;
+
 encode_tag(Key, {?TAG_STRING_TYPE, Value}) ->
 	<<
 		?TAG_STRING_ID:8/unsigned-integer,

@@ -23,7 +23,8 @@
 			"z"			=> {?TAG_DOUBLE_TYPE,	-799.2},
 			"stance"	=> {?TAG_FLOAT_TYPE,	87.0}
 		}
-	}).
+	}
+).
 
 floating_points_test_() -> [
 	{"decode file floating_points.nbt",
@@ -43,6 +44,13 @@ floating_points_test_() -> [
 			% to be preserved with NBT tags, we can't test for equality.
 			% So we only test if the length of these binaries are equal.
 			?assertEqual(byte_size(CorrectData), byte_size(EncodedNbt))
+		end
+	},
+	{"encode then decode",
+		fun () ->
+			{ok, EncodedNbt}	= erl_nbt:encode(?EXPECTED_NBT),
+			{ok, DecodedNbt}	= erl_nbt:decode(EncodedNbt),
+			?assertEqual(DecodedNbt, ?EXPECTED_NBT)
 		end
 	}
 ].

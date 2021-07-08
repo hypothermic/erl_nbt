@@ -52,5 +52,12 @@ compounds_test_() -> [
 			% So we only test if the length of these binaries are equal.
 			?assertEqual(byte_size(CorrectData), byte_size(EncodedNbt))
 		end
+	},
+	{"encode then decode",
+		fun () ->
+			{ok, EncodedNbt}	= erl_nbt:encode(?EXPECTED_NBT),
+			{ok, DecodedNbt}	= erl_nbt:decode(EncodedNbt),
+			?assertEqual(DecodedNbt, ?EXPECTED_NBT)
+		end
 	}
 ].

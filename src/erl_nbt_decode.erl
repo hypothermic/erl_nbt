@@ -116,6 +116,24 @@ decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id
 
 	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_DOUBLE_TYPE, Double}});
 
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_BYTE_ARRAY_ID ->
+	{ok, Name, Rest2} = decode_string(Rest),
+	{ok, ByteArray, Rest3} = decode_byte_array(Rest2),
+
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_BYTE_ARRAY_TYPE, ByteArray}});
+
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_INT_ARRAY_ID ->
+	{ok, Name, Rest2} = decode_string(Rest),
+	{ok, IntArray, Rest3} = decode_int_array(Rest2),
+
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_INT_ARRAY_TYPE, IntArray}});
+
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_LONG_ARRAY_ID ->
+	{ok, Name, Rest2} = decode_string(Rest),
+	{ok, LongArray, Rest3} = decode_long_array(Rest2),
+
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_LONG_ARRAY_TYPE, LongArray}});
+
 decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_STRING_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, String, Rest3} = decode_string(Rest2),
@@ -150,5 +168,21 @@ decode_float(<<Float:32/big-signed-float, Rest/binary>>) ->
 decode_double(<<Double:64/big-signed-float, Rest/binary>>) ->
 	{ok, Double, Rest}.
 
+decode_byte_array(<<Length:32/big-signed-integer, Rest/binary>>) ->
+	read_next_raw(Rest, 8, Length, []).
+
+decode_int_array(<<Length:32/big-signed-integer, Rest/binary>>) ->
+	read_next_raw(Rest, 32, Length, []).
+
+decode_long_array(<<Length:32/big-signed-integer, Rest/binary>>) ->
+	read_next_raw(Rest, 64, Length, []).
+
 decode_string(<<Length:16/unsigned-integer, String:Length/binary, Rest/binary>>) ->
 	{ok, binary_to_list(String), Rest}.
+
+read_next_raw(Data, UnitLength, Remaining, Out) when Remaining > 0 ->
+	<<Value:UnitLength/signed-integer, Rest/binary>> = Data,
+	read_next_raw(Rest, UnitLength, Remaining-1, [Value|Out]);
+
+read_next_raw(Data, _UnitLength, _Remaining, Out) ->
+	{ok, lists:reverse(Out), Data}.
