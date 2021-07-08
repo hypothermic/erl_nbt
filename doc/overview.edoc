@@ -18,4 +18,49 @@
     Examples of how to use the library can be found under the `test' directory,
     or on the documentation page `usage.edoc'
 
+    The mapping of NBT types to Erlang types can be found below:
+
+    <table>
+        <tr>
+            <th>NBT Type</th>
+            <th>Description</th>
+            <th>Erlang Type</th>
+        </tr>
+        <tr>
+            <td>Byte</td>
+            <td>8-bit signed integer</td>
+            <td>erlang:integer()</td>
+        </tr>
+        <tr>
+            <td>Short</td>
+            <td>16-bit signed integer</td>
+            <td>erlang:integer()</td>
+        </tr>
+        <tr>
+            <td>Int</td>
+            <td>32-bit signed integer</td>
+            <td>erlang:integer()</td>
+        </tr>
+        <tr>
+            <td>Long</td>
+            <td>64-bit signed integer</td>
+            <td>erlang:integer()</td>
+        </tr>
+        <tr>
+            <td>Float</td>
+            <td>32-bit signed float</td>
+            <td>erlang:float()</td>
+        </tr>
+        <tr>
+            <td>Double</td>
+            <td>64-bit signed float</td>
+            <td>erlang:float()</td>
+        </tr>
+        <tr>
+            <td>String</td>
+            <td>List of characters</td>
+            <td>erlang:string()</td>
+        </tr>
+    </table>
+
 @end

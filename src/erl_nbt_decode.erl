@@ -84,43 +84,43 @@ decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, Byte, Rest3} = decode_byte(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => Byte});
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_BYTE_TYPE, Byte}});
 
 decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_SHORT_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, Short, Rest3} = decode_short(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => Short});
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_SHORT_TYPE, Short}});
 
 decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_INT_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, Int, Rest3} = decode_int(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => Int});
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_INT_TYPE, Int}});
 
 decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_LONG_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, Long, Rest3} = decode_long(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => Long});
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_LONG_TYPE, Long}});
 
 decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_FLOAT_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, Float, Rest3} = decode_float(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => Float});
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_FLOAT_TYPE, Float}});
 
 decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_DOUBLE_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, Double, Rest3} = decode_double(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => Double});
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_DOUBLE_TYPE, Double}});
 
 decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_STRING_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, String, Rest3} = decode_string(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => String});
+	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_STRING_TYPE, String}});
 
 decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_COMPOUND_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
@@ -132,7 +132,7 @@ decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id
 decode_tag(<<Id:8/unsigned-integer, _Rest/binary>>, _Count, _Depth, _Output) ->
 	{error, {unknown_tag_id, Id}}.
 
-decode_byte(<<Byte:8/signed-integer, Rest/binary>>) ->
+decode_byte(<<Byte:8/big-signed-integer, Rest/binary>>) ->
 	{ok, Byte, Rest}.
 
 decode_short(<<Short:16/big-signed-integer, Rest/binary>>) ->

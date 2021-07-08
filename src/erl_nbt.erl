@@ -28,10 +28,12 @@
 	nbt_string/0, nbt_compound/0
 ]).
 
--type nbt()				:: #{nbt_key() => nbt_value()}.
--type nbt_key()			:: string().
--type nbt_value()		:: nbt_byte() | nbt_short() | nbt_int() | nbt_int() | nbt_long() | nbt_float() | nbt_double() |
+-type nbt()				:: #{nbt_key() => {nbt_type(), nbt_value()}}.
+-type nbt_key()			:: nbt_string().
+-type nbt_value()		:: nbt_byte() | nbt_short() | nbt_int() | nbt_long() | nbt_float() | nbt_double() |
 						   nbt_byte_array() | nbt_int_array() | nbt_long_array() | nbt_string() | nbt_compound().
+-type nbt_type()		:: byte | short | int | long | float | double |
+						    byte_array | int_array | long_array | string | compound.
 
 -type nbt_byte()		:: byte().
 -type nbt_short()		:: integer().
