@@ -17,7 +17,7 @@
 %%%-------------------------------------------------------------------
 
 -export([
-	decode/1
+	decode/2
 ]).
 
 %%%-------------------------------------------------------------------
@@ -30,8 +30,9 @@
 %%% 	If it is a compound tag, it will read all children (including
 %%% 	nested compound tags.)
 %%%
-%%% 	If the given binary has remaining data after the NBT tag,
-%%% 	this remaining data will be returned as Rest.
+%%%		If the given binary has remaining data after the NBT tag *AND*
+%%%		the option ?OPTION_RETURN_REMAINDER is given, this remaining
+%%%		data will be returned as Rest.
 %%%
 %%% @end
 %%%
@@ -45,14 +46,35 @@
 %%% @end
 %%%-------------------------------------------------------------------
 
--spec decode(Binary :: binary()) ->
+-spec decode(Binary :: binary(), Options :: erl_nbt:decode_options()) ->
+	{ok, Nbt :: erl_nbt:nbt()} |
 	{ok, Nbt :: erl_nbt:nbt(), Rest :: binary()} |
 	{error, {max_depth_reached, Depth :: integer()}} |
 	{error, {max_count_reached, Count :: integer()}} |
 	{error, {unknown_tag_id, EncounteredTagId :: integer()}}.
-decode(Binary) ->
+decode(Binary, Options) ->
 	% All NBT files/binaries are inherently compound tags, so read compound.
-	decode_tag(Binary, 0, 0, #{}).
+	{ok, Nbt, Rest} = decode_tag(
+		case lists:keyfind(compression, 1, Options) of
+			% ZLIB decompression
+			{?OPTION_COMPRESSION, ?COMPRESSION_ZLIB} ->
+				Z = zlib:open(),
+				ok = zlib:inflateInit(Z),
+				Inflated = zlib:inflate(Z, Binary),
+				ok = zlib:inflateEnd(Z),
+				ok = zlib:close(Z),
+				Inflated;
+			% No decompression
+			_ ->
+				Binary
+		end, 0, 0, #{}),
+
+	case lists:member(?OPTION_RETURN_REMAINDER, Options) of
+		true ->
+			{ok, Nbt, Rest};
+		false ->
+			{ok, Nbt}
+	end.
 
 %%%-------------------------------------------------------------------
 %%% Internal Functions
@@ -75,6 +97,10 @@ decode_tag(_Binary, Count, _Depth, _Output) when Count >= ?MAX_COUNT ->
 % Reached end of binary, this occurs because the root compound tag doesn't end with 0x00
 decode_tag(<<>>, _Count, _Depth, Output) ->
 	{ok, Output, <<>>};
+
+% Check if tag starts with the GZIP magic number
+decode_tag(<<31:8/unsigned-integer, 139:8/unsigned-integer, _/binary>> = Binary, Count, Depth, Output) ->
+	decode_tag(zlib:gunzip(Binary), Count, Depth, Output);
 
 % TAG_End reached, the current compound tag has been fully read. Return all children.
 decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, _Count, _Depth, Output) when Id =:= ?TAG_END_ID ->
@@ -140,6 +166,14 @@ decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id
 
 	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_STRING_TYPE, String}});
 
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_LIST_ID ->
+	{ok, Name, Rest2} = decode_string(Rest),
+	{ok, TypeId, Rest3} = decode_byte(Rest2),
+	{ok, Length, Rest4} = decode_int(Rest3),
+	{ok, List, Rest5} = decode_element(TypeId, Rest4, Length),
+
+	decode_tag(Rest5, Count + 1, Depth, Output#{Name => {?TAG_LIST_TYPE, tag_id_to_type(TypeId), List}});
+
 decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_COMPOUND_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, NestedCompound, Rest3} = decode_tag(Rest2, 0, Depth + 1, #{}),
@@ -149,6 +183,25 @@ decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id
 % Encountered an unknown tag ID, probably a malformed NBT file.
 decode_tag(<<Id:8/unsigned-integer, _Rest/binary>>, _Count, _Depth, _Output) ->
 	{error, {unknown_tag_id, Id}}.
+
+decode_element(TypeId, Binary, Length) ->
+	decode_element(TypeId, Binary, Length, []).
+
+decode_element(_TypeId, Binary, Remaining, Output) when Remaining =< 0 ->
+	{ok, lists:reverse(Output), Binary};
+
+decode_element(TypeId, Binary, Remaining, Output) ->
+	{ok, Element, Rest} = case TypeId of
+		?TAG_BYTE_ID -> decode_byte(Binary);
+		?TAG_SHORT_ID -> decode_short(Binary);
+		?TAG_INT_ID -> decode_int(Binary);
+		?TAG_LONG_ID -> decode_long(Binary);
+		?TAG_FLOAT_ID -> decode_float(Binary);
+		?TAG_DOUBLE_ID -> decode_double(Binary);
+		?TAG_STRING_ID -> decode_string(Binary);
+		?TAG_COMPOUND_ID -> decode_tag(Binary, 0, 0, #{})
+	end,
+	decode_element(TypeId, Rest, Remaining - 1, [Element | Output]).
 
 decode_byte(<<Byte:8/big-signed-integer, Rest/binary>>) ->
 	{ok, Byte, Rest}.
@@ -186,3 +239,19 @@ read_next_raw(Data, UnitLength, Remaining, Out) when Remaining > 0 ->
 
 read_next_raw(Data, _UnitLength, _Remaining, Out) ->
 	{ok, lists:reverse(Out), Data}.
+
+tag_id_to_type(Id) ->
+	case Id of
+		?TAG_BYTE_ID			-> ?TAG_BYTE_TYPE;
+		?TAG_SHORT_ID			-> ?TAG_SHORT_TYPE;
+		?TAG_INT_ID				-> ?TAG_INT_TYPE;
+		?TAG_LONG_ID			-> ?TAG_LONG_TYPE;
+		?TAG_FLOAT_ID			-> ?TAG_FLOAT_TYPE;
+		?TAG_DOUBLE_ID			-> ?TAG_DOUBLE_TYPE;
+		?TAG_BYTE_ARRAY_ID		-> ?TAG_BYTE_ARRAY_TYPE;
+		?TAG_INT_ARRAY_ID		-> ?TAG_INT_ARRAY_TYPE;
+		?TAG_LONG_ARRAY_ID		-> ?TAG_LONG_ARRAY_TYPE;
+		?TAG_STRING_ID			-> ?TAG_STRING_TYPE;
+		?TAG_LIST_ID			-> ?TAG_LIST_TYPE;
+		?TAG_COMPOUND_ID		-> ?TAG_COMPOUND_TYPE
+	end.
