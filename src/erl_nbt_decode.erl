@@ -53,9 +53,23 @@
 	{error, {max_count_reached, Count :: integer()}} |
 	{error, {unknown_tag_id, EncounteredTagId :: integer()}}.
 decode(Binary, Options) ->
+	% Use user-defined max depth and max children, or use the defaults
+	MaxDepth = case lists:keyfind(?OPTION_MAX_DEPTH, 1, Options) of
+				   {?OPTION_MAX_DEPTH, MaxDepthValue} ->
+					   MaxDepthValue;
+				   _ ->
+					   ?DEFAULT_MAX_DEPTH
+			   end,
+	MaxChildren = case lists:keyfind(?OPTION_MAX_CHILDREN, 1, Options) of
+					  {?OPTION_MAX_CHILDREN, MaxChildrenValue} ->
+						  MaxChildrenValue;
+					  _ ->
+						  ?DEFAULT_MAX_CHILDREN
+				  end,
+
 	% All NBT files/binaries are inherently compound tags, so read compound.
 	{ok, Nbt, Rest} = decode_tag(
-		case lists:keyfind(compression, 1, Options) of
+		case lists:keyfind(?OPTION_COMPRESSION, 1, Options) of
 			% ZLIB decompression
 			{?OPTION_COMPRESSION, ?COMPRESSION_ZLIB} ->
 				Z = zlib:open(),
@@ -67,7 +81,7 @@ decode(Binary, Options) ->
 			% No decompression
 			_ ->
 				Binary
-		end, 0, 0, #{}),
+		end, 0, MaxChildren, 0, MaxDepth, #{}),
 
 	case lists:member(?OPTION_RETURN_REMAINDER, Options) of
 		true ->
@@ -80,108 +94,109 @@ decode(Binary, Options) ->
 %%% Internal Functions
 %%%-------------------------------------------------------------------
 
--spec decode_tag(Binary :: binary(), Count :: integer(), Depth :: integer(), Output :: map()) ->
+-spec decode_tag(Binary :: binary(), Count :: integer(), MaxChildren :: integer(),
+	             Depth :: integer(), MaxDepth :: integer(), Output :: map()) ->
 	{ok, Nbt :: erl_nbt:nbt(), Rest :: binary()} |
 	{error, {max_depth_reached, Depth :: integer()}} |
 	{error, {max_count_reached, Count :: integer()}} |
 	{error, {unknown_tag_id, EncounteredTagId :: integer()}}.
 
 % Maximum tag depth has been reached, stop and return error.
-decode_tag(_Binary, _Count, Depth, _Output) when Depth >= ?MAX_DEPTH ->
+decode_tag(_Binary, _Count, _MaxChildren, Depth, MaxDepth, _Output) when Depth >= MaxDepth ->
 	{error, {max_depth_reached, Depth}};
 
 % Maximum child count has been reached, stop and return error.
-decode_tag(_Binary, Count, _Depth, _Output) when Count >= ?MAX_COUNT ->
+decode_tag(_Binary, Count, MaxChildren, _Depth, _MaxDepth, _Output) when Count >= MaxChildren ->
 	{error, {max_count_reached, Count}};
 
 % Reached end of binary, this occurs because the root compound tag doesn't end with 0x00
-decode_tag(<<>>, _Count, _Depth, Output) ->
+decode_tag(<<>>, _Count, _MaxChildren, _Depth, _MaxDepth, Output) ->
 	{ok, Output, <<>>};
 
 % Check if tag starts with the GZIP magic number
-decode_tag(<<31:8/unsigned-integer, 139:8/unsigned-integer, _/binary>> = Binary, Count, Depth, Output) ->
-	decode_tag(zlib:gunzip(Binary), Count, Depth, Output);
+decode_tag(<<31:8/unsigned-integer, 139:8/unsigned-integer, _/binary>> = Binary, Count, _MaxChildren, Depth, _MaxDepth, Output) ->
+	decode_tag(zlib:gunzip(Binary), Count, _MaxChildren, Depth, _MaxDepth, Output);
 
 % TAG_End reached, the current compound tag has been fully read. Return all children.
-decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, _Count, _Depth, Output) when Id =:= ?TAG_END_ID ->
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, _Count, _MaxChildren, _Depth, _MaxDepth, Output) when Id =:= ?TAG_END_ID ->
 	{ok, Output, Rest};
 
-decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_BYTE_ID ->
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, _MaxChildren, Depth, _MaxDepth, Output) when Id =:= ?TAG_BYTE_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, Byte, Rest3} = decode_byte(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_BYTE_TYPE, Byte}});
+	decode_tag(Rest3, Count + 1, _MaxChildren, Depth, _MaxDepth, Output#{Name => {?TAG_BYTE_TYPE, Byte}});
 
-decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_SHORT_ID ->
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, _MaxChildren, Depth, _MaxDepth, Output) when Id =:= ?TAG_SHORT_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, Short, Rest3} = decode_short(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_SHORT_TYPE, Short}});
+	decode_tag(Rest3, Count + 1, _MaxChildren, Depth, _MaxDepth, Output#{Name => {?TAG_SHORT_TYPE, Short}});
 
-decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_INT_ID ->
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, _MaxChildren, Depth, _MaxDepth, Output) when Id =:= ?TAG_INT_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, Int, Rest3} = decode_int(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_INT_TYPE, Int}});
+	decode_tag(Rest3, Count + 1, _MaxChildren, Depth, _MaxDepth, Output#{Name => {?TAG_INT_TYPE, Int}});
 
-decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_LONG_ID ->
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, _MaxChildren, Depth, _MaxDepth, Output) when Id =:= ?TAG_LONG_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, Long, Rest3} = decode_long(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_LONG_TYPE, Long}});
+	decode_tag(Rest3, Count + 1, _MaxChildren, Depth, _MaxDepth, Output#{Name => {?TAG_LONG_TYPE, Long}});
 
-decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_FLOAT_ID ->
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, _MaxChildren, Depth, _MaxDepth, Output) when Id =:= ?TAG_FLOAT_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, Float, Rest3} = decode_float(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_FLOAT_TYPE, Float}});
+	decode_tag(Rest3, Count + 1, _MaxChildren, Depth, _MaxDepth, Output#{Name => {?TAG_FLOAT_TYPE, Float}});
 
-decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_DOUBLE_ID ->
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, _MaxChildren, Depth, _MaxDepth, Output) when Id =:= ?TAG_DOUBLE_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, Double, Rest3} = decode_double(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_DOUBLE_TYPE, Double}});
+	decode_tag(Rest3, Count + 1, _MaxChildren, Depth, _MaxDepth, Output#{Name => {?TAG_DOUBLE_TYPE, Double}});
 
-decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_BYTE_ARRAY_ID ->
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, _MaxChildren, Depth, _MaxDepth, Output) when Id =:= ?TAG_BYTE_ARRAY_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, ByteArray, Rest3} = decode_byte_array(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_BYTE_ARRAY_TYPE, ByteArray}});
+	decode_tag(Rest3, Count + 1, _MaxChildren, Depth, _MaxDepth, Output#{Name => {?TAG_BYTE_ARRAY_TYPE, ByteArray}});
 
-decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_INT_ARRAY_ID ->
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, _MaxChildren, Depth, _MaxDepth, Output) when Id =:= ?TAG_INT_ARRAY_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, IntArray, Rest3} = decode_int_array(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_INT_ARRAY_TYPE, IntArray}});
+	decode_tag(Rest3, Count + 1, _MaxChildren, Depth, _MaxDepth, Output#{Name => {?TAG_INT_ARRAY_TYPE, IntArray}});
 
-decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_LONG_ARRAY_ID ->
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, _MaxChildren, Depth, _MaxDepth, Output) when Id =:= ?TAG_LONG_ARRAY_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, LongArray, Rest3} = decode_long_array(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_LONG_ARRAY_TYPE, LongArray}});
+	decode_tag(Rest3, Count + 1, _MaxChildren, Depth, _MaxDepth, Output#{Name => {?TAG_LONG_ARRAY_TYPE, LongArray}});
 
-decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_STRING_ID ->
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, _MaxChildren, Depth, _MaxDepth, Output) when Id =:= ?TAG_STRING_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, String, Rest3} = decode_string(Rest2),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => {?TAG_STRING_TYPE, String}});
+	decode_tag(Rest3, Count + 1, _MaxChildren, Depth, _MaxDepth, Output#{Name => {?TAG_STRING_TYPE, String}});
 
-decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_LIST_ID ->
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, _MaxChildren, Depth, _MaxDepth, Output) when Id =:= ?TAG_LIST_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
 	{ok, TypeId, Rest3} = decode_byte(Rest2),
 	{ok, Length, Rest4} = decode_int(Rest3),
 	{ok, List, Rest5} = decode_element(TypeId, Rest4, Length),
 
-	decode_tag(Rest5, Count + 1, Depth, Output#{Name => {?TAG_LIST_TYPE, tag_id_to_type(TypeId), List}});
+	decode_tag(Rest5, Count + 1, _MaxChildren, Depth, _MaxDepth, Output#{Name => {?TAG_LIST_TYPE, tag_id_to_type(TypeId), List}});
 
-decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, Depth, Output) when Id =:= ?TAG_COMPOUND_ID ->
+decode_tag(<<Id:8/unsigned-integer, Rest/binary>>, Count, _MaxChildren, Depth, _MaxDepth, Output) when Id =:= ?TAG_COMPOUND_ID ->
 	{ok, Name, Rest2} = decode_string(Rest),
-	{ok, NestedCompound, Rest3} = decode_tag(Rest2, 0, Depth + 1, #{}),
+	{ok, NestedCompound, Rest3} = decode_tag(Rest2, 0, _MaxChildren, Depth + 1, _MaxDepth, #{}),
 
-	decode_tag(Rest3, Count + 1, Depth, Output#{Name => NestedCompound});
+	decode_tag(Rest3, Count + 1, _MaxChildren, Depth, _MaxDepth, Output#{Name => NestedCompound});
 
 % Encountered an unknown tag ID, probably a malformed NBT file.
-decode_tag(<<Id:8/unsigned-integer, _Rest/binary>>, _Count, _Depth, _Output) ->
+decode_tag(<<Id:8/unsigned-integer, _Rest/binary>>, _Count, _MaxChildren, _Depth, _MaxDepth, _Output) ->
 	{error, {unknown_tag_id, Id}}.
 
 decode_element(TypeId, Binary, Length) ->
@@ -199,7 +214,7 @@ decode_element(TypeId, Binary, Remaining, Output) ->
 		?TAG_FLOAT_ID -> decode_float(Binary);
 		?TAG_DOUBLE_ID -> decode_double(Binary);
 		?TAG_STRING_ID -> decode_string(Binary);
-		?TAG_COMPOUND_ID -> decode_tag(Binary, 0, 0, #{})
+		?TAG_COMPOUND_ID -> decode_tag(Binary, 0, ?DEFAULT_MAX_CHILDREN, 0, ?DEFAULT_MAX_DEPTH, #{})
 	end,
 	decode_element(TypeId, Rest, Remaining - 1, [Element | Output]).
 

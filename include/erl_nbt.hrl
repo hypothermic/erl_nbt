@@ -54,9 +54,13 @@
 -define(COMPRESSION_GZIP,			gzip).
 -define(COMPRESSION_ZLIB,			zlib).
 
+-define(OPTION_MAX_DEPTH,			max_depth).
+-define(OPTION_MAX_CHILDREN,		max_children).
+
 %%%-------------------------------------------------------------------
-%%% Limits according to NBT spec
+%%% Default parsing limits according to NBT spec
+%%% 	(configurable by passing options to erl_nbt:decode())
 %%%-------------------------------------------------------------------
 
--define(MAX_DEPTH,					256).
--define(MAX_COUNT,					1024).
+-define(DEFAULT_MAX_DEPTH,			256).
+-define(DEFAULT_MAX_CHILDREN,		1024).

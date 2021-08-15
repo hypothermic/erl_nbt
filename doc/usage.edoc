@@ -2,7 +2,7 @@
 
 @author Matthijs Bakker <matthijs at hypothermic .nl>
 @copyright 2021 hypothermic.nl
-@version 0.1.0
+@version 1.0.0
 @title Examples of how to use the `erl_nbt' library
 @doc Examples of how to use the `erl_nbt' library
 

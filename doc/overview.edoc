@@ -2,18 +2,12 @@
 
 @author Matthijs Bakker <matthijs at hypothermic .nl>
 @copyright 2021 hypothermic.nl
-@version 0.1.0
+@version 1.0.0
 @title Overview of the erl_nbt library
 @doc `erl_nbt' is a library which can manipulate NBT (Named Binary Tag) data.
 
     It can decode binary NBT data to an Erlang Map.
     It can encode data in an Erlang Map to binary NBT data.
-
-    Currently, the decoding limits of an NBT tag are fixed (see erl_nbt.hrl).
-    In future versions of this library, the decoding limits will be
-    modifiable via options given to the decode function.
-    The maximum amount of nested compound tags when decoding an NBT binary is currently set at `256'.
-    The maximum amount of children under a compound tag when decoding an NBT binary is currently set at `1024'.
 
     Examples of how to use the library can be found under the `test' directory,
     or on the documentation page `usage.edoc'
@@ -63,4 +57,79 @@
         </tr>
     </table>
 
+    <hr />
+
+    The following options can be passed to `erl_nbt:decode/2' and/or `erl_nbt:encode/2':
+
+    <table>
+        <tr>
+            <th>Option</th>
+            <th>Value Type</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>?OPTION_COMPRESSION</td>
+            <td>erl_nbt:compression()</td>
+            <td>
+                Instructs the encoder/decoder to force the usage of a particular kind of compression.
+            </td>
+        </tr>
+        <tr>
+            <td>?OPTION_MAX_DEPTH</td>
+            <td>integer()</td>
+            <td>
+                Sets the maximum depth of nested compound tags that will be read.
+                This value defaults to ?DEFAULT_MAX_DEPTH
+            </td>
+        </tr>
+        <tr>
+            <td>?OPTION_MAX_CHILDREN</td>
+            <td>integer()</td>
+            <td>
+                Sets the maximum amount of children that will be read from a compound tag.
+                This value defaults to ?DEFAULT_MAX_CHILDREN
+            </td>
+        </tr>
+        <tr>
+            <td>?OPTION_RETURN_REMAINDER</td>
+            <td>-</td>
+            <td>
+                Instructs the decoder to return any bytes that follow the first NBT tag.
+                Does not have any use in 'erl_nbt:encode/2'.
+            </td>
+        </tr>
+    </table>
+
+    <hr />
+
+    Minimal example:
+
+    <pre>
+        EncodedBinary = erl_nbt:encode(#{"player" => #{"name" => {?TAG_STRING_TYPE, "Bananrama"}}}),
+
+        DecodedNbt = erl_nbt:decode(EncodedBinary),
+    </pre>
+
+    <hr />
+
+    Version history:
+
+    <table>
+        <tr>
+            <th>Version Tag</th>
+            <th>Notes</th>
+        </tr>
+        <tr>
+            <td>0.1.0</td>
+            <td>Initial Release</td>
+        </tr>
+        <tr>
+            <td>0.2.0</td>
+            <td>Improved Erlang data structure representation, support for typed array tags</td>
+        </tr>
+        <tr>
+            <td>1.0.0</td>
+            <td>Support for typed lists, let user give encoder/decoder options, solidify API</td>
+        </tr>
+    </table>
 @end

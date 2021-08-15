@@ -82,7 +82,10 @@
 -type compression()		:: ?COMPRESSION_UNCOMPRESSED | ?COMPRESSION_GZIP.
 % The types of compression that may be used in NBT files according to the official spec
 
--type decode_option()	:: ?OPTION_RETURN_REMAINDER | {?OPTION_COMPRESSION, Compression :: compression()}.
+-type decode_option()	:: ?OPTION_RETURN_REMAINDER |
+                     	   {?OPTION_COMPRESSION,  Compression :: compression()} |
+                     	   {?OPTION_MAX_CHILDREN, MaxChildren :: integer()} |
+                     	   {?OPTION_MAX_DEPTH,    MaxDepth :: integer()}.
 % An option which alters the functionality of the decoding process
 
 -type encode_option()	:: {?OPTION_COMPRESSION, Compression :: compression()}.

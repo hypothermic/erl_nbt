@@ -2,7 +2,8 @@
 %%% @author Matthijs Bakker <matthijs at hypothermic .nl>
 %%% @copyright (C) 2021 hypothermic.nl
 %%% @doc
-%%%
+%%%     Tests the erl_nbt functionality on the "bigtest.nbt" example
+%%%     provided by Notch
 %%% @end
 %%% Created : 15. Aug 2021 1:40 AM
 %%%-------------------------------------------------------------------

@@ -15,7 +15,7 @@
 -include_lib("bigtest_test.hrl").
 
 -define(TEST_FILE,	"test/bigtest.nbt").
--define(OPTIONS,  	[{compression, gzip}]).
+-define(OPTIONS,  	[{?OPTION_COMPRESSION, ?COMPRESSION_GZIP}]).
 
 basic_test_() -> [
 	{"decode file bigtest.nbt",

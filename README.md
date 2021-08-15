@@ -5,9 +5,6 @@ An Erlang/OTP library which can manipulate NBT (Named Binary Tag) data.
 
 This library currently is up to date with the [1.0 spec](https://web.archive.org/web/20110723210920/http://www.minecraft.net/docs/NBT.txt).
 
-Please note that the API may change before the first major version is released.  
-If you want to avoid API breakage, please wait until version 1.0.0 is released.
-
 Quick navigation:
 [Build](#building-the-library)
 [Usage](#using-the-library)
@@ -35,15 +32,24 @@ Depending on your build tool, add the following line to the "dependencies" secti
 
 | Build Tool            | Dependency line |
 | --------------------- | ------- |
-| rebar3 (Erlang/OTP)   | `{erl_nbt, "0.2.0"}` |
-| mix (Elixir)          | `{:erl_nbt "~> 0.2.0"}` |
-| erlang.mk (Erlang)    | `dep_erl_nbt = hex 0.2.0` |
+| rebar3 (Erlang/OTP)   | `{erl_nbt, "1.0.0"}` |
+| mix (Elixir)          | `{:erl_nbt "~> 1.0.0"}` |
+| erlang.mk (Erlang)    | `dep_erl_nbt = hex 1.0.0` |
 
 Documentation
 -----
 
 The documentation can be generated locally by running `rebar3 edoc`.
 A pre-generated version can be viewed online on [Hex docs](https://hexdocs.pm/erl_nbt/).
+
+Version history
+-----
+
+| Version Tag | Notes                                                                          |
+| ----------- | ------------------------------------------------------------------------------ |
+| 0.1.0       | Initial release                                                                |
+| 0.2.0       | Improved Erlang data structure representation, support for typed array tags    |
+| 1.0.0       | Support for typed lists, let user give encoder/decoder options, solidify API   |
 
 Legal notice
 -----
